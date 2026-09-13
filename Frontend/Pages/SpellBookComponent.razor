@@ -537,10 +537,12 @@
 
             List<TrainerEntry> entries = new(ids.Length);
 
-            foreach (int id in ids)
+            for (int i = 0; i < ids.Length; i++)
             {
-                TrainableState state = TrainerSpells.GetState(
-                    id, spellBookReader, spellDB, playerLevel, out Spell spell);
+                int id = ids[i];
+
+                TrainableState state = TrainerSpells.GetRankState(
+                    ids, i, spellBookReader, spellDB, playerLevel, out Spell spell);
 
                 switch (state)
                 {

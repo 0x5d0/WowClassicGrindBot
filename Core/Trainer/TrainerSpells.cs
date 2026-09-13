@@ -141,6 +141,7 @@ public static class TrainerSpells
 
         return state == TrainableState.Trainable;
     }
+
     private static int FirstRankAfterHighest(
         int[] ids,
         SpellBookReader spellBookReader)
@@ -156,6 +157,32 @@ public static class TrainerSpells
         }
 
         return highestIndex + 1;
+    }
+
+    public static TrainableState GetRankState(
+        int[] ids,
+        int index,
+        SpellBookReader spellBookReader,
+        SpellDB spellDB,
+        int playerLevel,
+        out Spell spell)
+    {
+        if ((uint)index >= (uint)ids.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        int first = FirstRankAfterHighest(ids, spellBookReader);
+
+        TrainableState state = GetState(
+            ids[index], spellBookReader, spellDB, playerLevel, out spell);
+        
+        if (index < first)
+        {
+            return TrainableState.Known;
+        }
+
+        return state;
     }
 }
 
