@@ -60,7 +60,10 @@ public static class TrainerSpells
         for (int i = 0; i < whitelist.Length; i++)
         {
             int[] ids = whitelist[i];
-            for (int j = 0; j < ids.Length; j++)
+
+            int first = FirstRankAfterHighest(ids, spellBookReader);
+
+            for (int j = first; j < ids.Length; j++)
             {
                 if (IsTrainable(ids[j], spellBookReader, spellDB, playerLevel, out _))
                     return true;
@@ -82,7 +85,10 @@ public static class TrainerSpells
         for (int i = 0; i < whitelist.Length; i++)
         {
             int[] ids = whitelist[i];
-            for (int j = 0; j < ids.Length; j++)
+
+            int first = FirstRankAfterHighest(ids, spellBookReader);
+
+            for (int j = first; j < ids.Length; j++)
             {
                 if (written >= destination.Length)
                     return written;
@@ -134,6 +140,49 @@ public static class TrainerSpells
         missingFromDB = state == TrainableState.NotInThisClient;
 
         return state == TrainableState.Trainable;
+    }
+
+    private static int FirstRankAfterHighest(
+        int[] ids,
+        SpellBookReader spellBookReader)
+    {
+        int highestIndex = -1;
+
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (spellBookReader.HasExact(ids[i]))
+            {
+                highestIndex = i;
+            }
+        }
+
+        return highestIndex + 1;
+    }
+
+    public static TrainableState GetRankState(
+        int[] ids,
+        int index,
+        SpellBookReader spellBookReader,
+        SpellDB spellDB,
+        int playerLevel,
+        out Spell spell)
+    {
+        if ((uint)index >= (uint)ids.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(index));
+        }
+
+        int first = FirstRankAfterHighest(ids, spellBookReader);
+
+        TrainableState state = GetState(
+            ids[index], spellBookReader, spellDB, playerLevel, out spell);
+        
+        if (index < first)
+        {
+            return TrainableState.Known;
+        }
+
+        return state;
     }
 }
 
