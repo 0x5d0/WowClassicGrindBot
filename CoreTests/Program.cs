@@ -45,11 +45,12 @@ internal sealed class Program
         ["pather"] = Test_PPather,
         ["navmesh"] = Test_NavmeshCoords,
         ["routegen"] = Test_RouteGeneration,
+        ["quest-reader"] = _ => QuestReaderProtocolTests.Run(),
     };
 
     /// <summary>Suites that need no WoW process - see the attach decision in Main.</summary>
     private static readonly HashSet<string> offlineSuites =
-        new(StringComparer.OrdinalIgnoreCase) { "navmesh", "routegen" };
+        new(StringComparer.OrdinalIgnoreCase) { "navmesh", "routegen", "quest-reader" };
 
     public static void Main(string[] args)
     {
