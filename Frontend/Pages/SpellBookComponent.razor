@@ -189,6 +189,10 @@
             </div>
             <span class="badge bg-success me-1">@trainableCount Trainable</span>
             <span class="badge bg-secondary me-1">@knownCount Known</span>
+            @if (supersededCount > 0)
+            {
+                <span class="badge bg-secondary bg-opacity-50 me-1">@supersededCount Outranked</span>
+            }
             <span class="badge bg-dark me-1">@lockedCount Level locked</span>
         </div>
     </div>
@@ -272,6 +276,12 @@
                                             case TrainableState.Known:
                                                 <span class="badge bg-secondary">Known</span>
                                                 break;
+                                            case TrainableState.Superseded:
+                                                <span class="badge bg-secondary bg-opacity-50"
+                                                      title="A higher rank of this spell is already known, so this rank is settled whether or not the client still lists it">
+                                                    Outranked
+                                                </span>
+                                                break;
                                             case TrainableState.LevelLocked:
                                                 <span class="badge bg-dark">Level @entry.RequiredLevel</span>
                                                 break;
@@ -320,6 +330,7 @@
     private List<TrainerGroup> trainerGroups = [];
     private int trainableCount;
     private int knownCount;
+    private int supersededCount;
     private int lockedCount;
     private int lastTrainerLevel = -1;
 
@@ -521,6 +532,7 @@
         trainerGroups = [];
         trainableCount = 0;
         knownCount = 0;
+        supersededCount = 0;
         lockedCount = 0;
 
         int playerLevel = playerReader.Level.Value;
@@ -537,17 +549,27 @@
 
             List<TrainerEntry> entries = new(ids.Length);
 
+            // Once per group, not once per row: the skip point is a property of the
+            // chain, and recomputing it per rank makes the rebuild quadratic.
+            int first = TrainerSpells.FirstUnsettledRank(ids, spellBookReader);
+
             for (int i = 0; i < ids.Length; i++)
             {
                 int id = ids[i];
 
-                TrainableState state = TrainerSpells.GetRankState(
-                    ids, i, spellBookReader, spellDB, playerLevel, out Spell spell);
+                TrainableState state = TrainerSpells.GetState(
+                    id, spellBookReader, spellDB, playerLevel, out Spell spell);
+
+                // Below the rank already owned there is nothing to learn, but the player
+                // does not hold this exact rank either - say outranked, not known.
+                if (state != TrainableState.Known && i < first)
+                    state = TrainableState.Superseded;
 
                 switch (state)
                 {
                     case TrainableState.Trainable: trainableCount++; break;
                     case TrainableState.Known: knownCount++; break;
+                    case TrainableState.Superseded: supersededCount++; break;
                     case TrainableState.LevelLocked: lockedCount++; break;
                 }
 
