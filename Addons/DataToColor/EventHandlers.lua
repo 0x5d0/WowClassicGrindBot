@@ -617,10 +617,33 @@ function DataToColor:OnCombatEvent(...)
     end
 end
 
+-- 2.5.6 appended a fourth argument to UNIT_SPELLCAST_SUCCEEDED and _FAILED, nil in
+-- every sample, so select(-1) reads that instead of the id. The nil does not fault at
+-- the event - PushCastEvent coerces it - it faults a frame later in the pixel loop,
+-- which is why the report reads as an occasional rshift error.
+--
+-- Measured payloads, excluding the event AceEvent passes as the first vararg:
+--   4.3.4   unit, name, rank, lineID, spellID
+--   1.14.2  unit, castGUID, spellID
+--   2.5.3   unit, castGUID, spellID
+--   2.5.6   unit, castGUID, spellID, nil
+--
+-- The id is the last numeric argument on all four, so read it by shape rather than by
+-- client: a fixed index cannot serve both layouts, and 2.5.3 and 2.5.6 disagree while
+-- sharing WOW_PROJECT_ID 5. UNIT_SPELLCAST_SENT carries no id on 4.3.4 and yields its
+-- lineID here, which is what select(-1) has always returned there.
+local function CastEventSpellId(...)
+    for i = select("#", ...), 1, -1 do
+        local v = select(i, ...)
+        if type(v) == "number" then return v end
+    end
+    return 0
+end
+
 function DataToColor:OnUnitSpellCastSent(...)
     --print(...)
     local unit = select(2, ...)
-    local spellId = select(-1, ...)
+    local spellId = CastEventSpellId(...)
     if unit ~= DataToColor.C.unitPlayer then return end
 
     DataToColor.lastCastEvent = CAST_SENT
@@ -632,12 +655,7 @@ end
 function DataToColor:OnUnitSpellCastSucceeded(...)
     --print(...)
     local unit = select(2, ...)
-    local spellId
-    if DataToColor.IsClassic_BCC() then
-        spellId = select(4, ...)
-    else
-        spellId = select(-1, ...)
-    end
+    local spellId = CastEventSpellId(...)
     if unit ~= DataToColor.C.unitPlayer then return end
 
     DataToColor.lastCastEvent = CAST_SUCCESS
@@ -650,12 +668,7 @@ end
 function DataToColor:OnUnitSpellCastFailed(...)
     --print(...)
     local unit = select(2, ...)
-    local spellId
-    if DataToColor.IsClassic_BCC() then
-        spellId = select(4, ...)
-    else
-        spellId = select(-1, ...)
-    end
+    local spellId = CastEventSpellId(...)
     if unit ~= DataToColor.C.unitPlayer then return end
 
     DataToColor.lastCastEvent = DataToColor.uiErrorMessage
