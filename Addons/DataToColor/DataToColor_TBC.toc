@@ -15,6 +15,7 @@ Collections.lua
 
 Versions.lua
 
+Quest.lua
 Constants.lua
 Query.lua
 BitCache.lua
