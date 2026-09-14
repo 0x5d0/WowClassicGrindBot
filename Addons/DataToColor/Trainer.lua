@@ -12,6 +12,7 @@ local gmatch = string.gmatch
 local tonumber = tonumber
 local pairs = pairs
 local wipe = wipe
+local pcall = pcall
 
 -- Deliberately not captured at file scope: the trainer API is absent on some clients,
 -- and a nil local would raise on call instead of degrading to TRAINER_NO_MATCH.
@@ -217,6 +218,34 @@ function DataToColor:TAdd(ids)
     end
 end
 
+-- The on/off argument flipped type inside a single client version: 2.5.3 takes 1 and
+-- errors on a boolean, 2.5.6 takes true and errors on a number, both reporting
+-- "Missing on/off parameter" and both answering WOW_PROJECT_ID 5. There is no build
+-- gate to write, so the accepted form is probed once and remembered. Nothing is cached
+-- until a form lands, leaving a probe that failed for any other reason - the trainer
+-- frame not being open - to retry on the next visit.
+local mFilterOn
+
+-- Unhide everything so a service is never missed because of a leftover filter.
+local function UnfilterServices()
+    local f = SetTrainerServiceTypeFilter
+    if not f then return end
+
+    if mFilterOn == nil then
+        if pcall(f, "available", true) then
+            mFilterOn = true
+        elseif pcall(f, "available", 1) then
+            mFilterOn = 1
+        else
+            return
+        end
+    end
+
+    f("available", mFilterOn)
+    f("unavailable", mFilterOn)
+    f("used", mFilterOn)
+end
+
 -- TGo: Start training
 -- Buys every wanted spell the trainer offers and the player can afford.
 -- Parameters:
@@ -232,17 +261,7 @@ function DataToColor:TGo(trainAll)
     mTrainAll = trainAll ~= nil and trainAll ~= 0
     mRunning = true
 
-    -- Unhide everything so a service is never missed because of a leftover filter.
-    if SetTrainerServiceTypeFilter then
-        local enabled = 1;
-        if DataToColor.IsClassic_BCC() then
-            enabled = true;
-        end
-
-        SetTrainerServiceTypeFilter("available", enabled)
-        SetTrainerServiceTypeFilter("unavailable", enabled)
-        SetTrainerServiceTypeFilter("used", enabled)
-    end
+    UnfilterServices()
 
     for spellId in pairs(mWanted) do
         local name, rank = GetSpellInfo(spellId)
