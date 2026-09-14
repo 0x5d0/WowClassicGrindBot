@@ -60,7 +60,10 @@ public static class TrainerSpells
         for (int i = 0; i < whitelist.Length; i++)
         {
             int[] ids = whitelist[i];
-            for (int j = 0; j < ids.Length; j++)
+
+            int first = FirstUnsettledRank(ids, spellBookReader);
+
+            for (int j = first; j < ids.Length; j++)
             {
                 if (IsTrainable(ids[j], spellBookReader, spellDB, playerLevel, out _))
                     return true;
@@ -82,7 +85,13 @@ public static class TrainerSpells
         for (int i = 0; i < whitelist.Length; i++)
         {
             int[] ids = whitelist[i];
-            for (int j = 0; j < ids.Length; j++)
+
+            // Settled ranks are skipped outright rather than judged, so they no longer
+            // reach unknownIds either - an id below the rank already owned is not a
+            // spells.json gap worth reporting.
+            int first = FirstUnsettledRank(ids, spellBookReader);
+
+            for (int j = first; j < ids.Length; j++)
             {
                 if (written >= destination.Length)
                     return written;
@@ -135,6 +144,32 @@ public static class TrainerSpells
 
         return state == TrainableState.Trainable;
     }
+
+    /// <summary>
+    /// Index of the first rank still worth a verdict: every rank below the highest one
+    /// the player owns is settled, whether or not those exact ids are still in the
+    /// spellbook. Without this a rank that dropped out of the book - superseded, or
+    /// removed by the client - keeps reading as Trainable, and the bot walks back to the
+    /// trainer on every pass to learn something it cannot learn.
+    /// <para>
+    /// Leans on the ascending order <see cref="VAR_PREFIX"/> documents. Answers 0 while
+    /// <see cref="SpellBookReader.AllRanksReceived"/> is false, since HasExact reports
+    /// false for every rank that has not arrived yet - the same reason the callers above
+    /// refuse to answer at all until then.
+    /// </para>
+    /// </summary>
+    public static int FirstUnsettledRank(int[] ids, SpellBookReader spellBookReader)
+    {
+        int highest = -1;
+
+        for (int i = 0; i < ids.Length; i++)
+        {
+            if (spellBookReader.HasExact(ids[i]))
+                highest = i;
+        }
+
+        return highest + 1;
+    }
 }
 
 public enum TrainableState
@@ -149,5 +184,12 @@ public enum TrainableState
     LevelLocked,
 
     /// <summary>The running client's spells.json has no such id.</summary>
-    NotInThisClient
+    NotInThisClient,
+
+    /// <summary>
+    /// Not in the spellbook at this exact rank, but a higher rank of the same spell is,
+    /// so there is nothing left to learn here. Distinct from <see cref="Known"/> because
+    /// the player does not actually hold this rank - the UI should not claim they do.
+    /// </summary>
+    Superseded
 }
