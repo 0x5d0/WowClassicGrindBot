@@ -3449,7 +3449,35 @@ e.g.
 "Requirement": "SpellInRange:4"
 "Requirements": ["Health% < 80", "SpellInRange:2"]
 ```
+---
+### **Quest requirements**
 
+Quest conditions use a numeric quest ID:
+
+| Requirement | Meaning |
+| --- | --- |
+| `QuestActive:<questId>` | The active quest snapshot contains the quest. |
+| `QuestReady:<questId>` | The quest is ready to turn in. |
+| `QuestFailed:<questId>` | The quest is active and failed. |
+| `QuestCompleted:<questId>` | History confirms the quest was completed. |
+| `QuestNotCompleted:<questId>` | History confirms the quest was not completed. |
+
+`QuestCompleted` and `QuestNotCompleted` require the same ID in the
+profile's `QuestHistoryIds` array. Both evaluate to `false` until the bot has
+received a complete history response.
+
+Use `QuestNotCompleted:<questId>`, rather than
+`!QuestCompleted:<questId>`, when a profile must wait for confirmed history
+data:
+
+```json
+{
+    "QuestHistoryIds": [6062],
+    "Requirements": [
+        "QuestNotCompleted:6062"
+    ]
+}
+```
 ---
 ### **Target Casting Spell requirement**
 

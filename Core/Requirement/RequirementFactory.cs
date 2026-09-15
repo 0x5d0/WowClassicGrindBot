@@ -24,6 +24,8 @@ public sealed partial class RequirementFactory
 {
     private readonly ILogger logger;
     private readonly AddonReader addonReader;
+    private readonly QuestReader questReader;
+    private readonly QuestHistoryReader questHistoryReader;
     private readonly PlayerReader playerReader;
     private readonly BuffStatus<IPlayer> buffs;
     private readonly BagReader bagReader;
@@ -77,6 +79,8 @@ public sealed partial class RequirementFactory
     {
         this.logger = sp.GetRequiredService<ILogger>();
         this.addonReader = sp.GetRequiredService<AddonReader>();
+        this.questReader = sp.GetRequiredService<QuestReader>();
+        this.questHistoryReader = sp.GetRequiredService<QuestHistoryReader>();
         this.playerReader = sp.GetRequiredService<PlayerReader>();
         this.buffs = sp.GetRequiredService<BuffStatus<IPlayer>>();
         this.bagReader = sp.GetRequiredService<BagReader>();
@@ -122,6 +126,11 @@ public sealed partial class RequirementFactory
         {
             { "npcID:", CreateNpcId },
             { "BagItem:", CreateBagItem },
+            { "QuestActive:", CreateQuestActive },
+            { "QuestReady:", CreateQuestReady },
+            { "QuestFailed:", CreateQuestFailed },
+            { "QuestCompleted:", CreateQuestCompleted },
+            { "QuestNotCompleted:", CreateQuestNotCompleted },
             { "SpellInRange:", CreateSpellInRange },
             { "TargetCastingSpell", CreateTargetCastingSpell },
             { "Form", CreateForm },
@@ -1037,6 +1046,111 @@ public sealed partial class RequirementFactory
     {
         return intVariables[key]() <=
             Max(0, playerReader.SpellQueueTimeMs - playerReader.NetworkLatency);
+    }
+
+    private Requirement CreateQuestActive(ReadOnlySpan<char> text)
+    {
+        int questId = ParseQuestId(text);
+
+        return CreateQuestRequirement(
+            text,
+            questId,
+            questReader.IsActive);
+    }
+
+    private Requirement CreateQuestReady(ReadOnlySpan<char> text)
+    {
+        int questId = ParseQuestId(text);
+
+        return CreateQuestRequirement(
+            text,
+            questId,
+            questReader.IsReadyForTurnIn);
+    }
+
+    private Requirement CreateQuestFailed(ReadOnlySpan<char> text)
+    {
+        int questId = ParseQuestId(text);
+
+        return CreateQuestRequirement(
+            text,
+            questId,
+            questReader.IsFailed);
+    }
+
+    private Requirement CreateQuestCompleted(ReadOnlySpan<char> text)
+    {
+        return CreateHistoryRequirement(
+            text,
+            questHistoryReader.IsCompleted);
+    }
+
+    private Requirement CreateQuestNotCompleted(ReadOnlySpan<char> text)
+    {
+        return CreateHistoryRequirement(
+            text,
+            questHistoryReader.IsNotCompleted);
+    }
+
+    private Requirement CreateHistoryRequirement(
+        ReadOnlySpan<char> text,
+        Func<int, bool> matches)
+    {
+        int questId = ParseQuestId(text);
+
+        EnsureHistoryQuest(questId, text);
+
+        return CreateQuestRequirement(text, questId, matches);
+    }
+
+    private void EnsureHistoryQuest(
+        int questId,
+        ReadOnlySpan<char> text)
+    {
+        if (Array.IndexOf(classConfig.QuestHistoryIds, questId) >= 0)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"'{text.ToString()}' requires " +
+            $"{nameof(ClassConfiguration.QuestHistoryIds)} to contain " +
+            $"{questId}.");
+    }
+
+    private static Requirement CreateQuestRequirement(
+        ReadOnlySpan<char> text,
+        int questId,
+        Func<int, bool> matches)
+    {
+        string name = text.ToString();
+
+        return new Requirement
+        {
+            HasRequirement = () => matches(questId),
+            LogMessage = () => name
+        };
+    }
+
+    private static int ParseQuestId(ReadOnlySpan<char> text)
+    {
+        int separator = text.IndexOf(SEP1);
+
+        if (separator < 0)
+        {
+            throw new ArgumentException(
+                $"'{text.ToString()}' requires a positive quest ID.");
+        }
+
+        ReadOnlySpan<char> value = text[(separator + 1)..].Trim();
+
+        if (!int.TryParse(value, out int questId) || questId <= 0)
+        {
+            throw new ArgumentException(
+                $"'{text.ToString()}' requires a positive quest ID.");
+        }
+
+        return questId;
     }
 
     private Requirement CreateTargetCastingSpell(ReadOnlySpan<char> requirement)

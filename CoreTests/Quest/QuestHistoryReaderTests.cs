@@ -15,6 +15,7 @@ internal static class QuestHistoryReaderTests
 
         TestCompleteSnapshot(loggerFactory);
         TestUnknownUntilCommitted(loggerFactory);
+        TestCompletionPredicates(loggerFactory);
         TestDroppedRecord(loggerFactory);
         TestRepeatedValues(loggerFactory);
         TestReset(loggerFactory);
@@ -61,6 +62,37 @@ internal static class QuestHistoryReaderTests
         Feed(reader, provider, End(0));
 
         AssertCompletion(reader, 6062, false);
+    }
+
+    private static void TestCompletionPredicates(
+        ILoggerFactory loggerFactory)
+    {
+        QuestHistoryReader reader = CreateReader(loggerFactory);
+        using NullAddonDataProvider provider = new(121);
+
+        Assert(!reader.IsCompleted(6062),
+            "Unknown completion must not be reported as completed.");
+
+        Assert(!reader.IsNotCompleted(6062),
+            "Unknown completion must not be reported as not completed.");
+
+        Feed(reader, provider,
+            Header(0, 2),
+            Record(6062, 0, false),
+            Record(6081, 0, true),
+            End(0));
+
+        Assert(reader.IsNotCompleted(6062),
+            "A confirmed false record must be not completed.");
+
+        Assert(!reader.IsCompleted(6062),
+            "A confirmed false record must not be completed.");
+
+        Assert(reader.IsCompleted(6081),
+            "A confirmed true record must be completed.");
+
+        Assert(!reader.IsNotCompleted(6081),
+            "A confirmed true record must not be not completed.");
     }
 
     private static void TestDroppedRecord(

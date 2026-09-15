@@ -85,6 +85,18 @@ public sealed class QuestHistoryReader : IReader
         return false;
     }
 
+    public bool IsCompleted(int questId)
+    {
+        return TryGetCompletion(questId, out bool isCompleted) &&
+            isCompleted;
+    }
+
+    public bool IsNotCompleted(int questId)
+    {
+        return TryGetCompletion(questId, out bool isCompleted) &&
+            !isCompleted;
+    }
+
     public void Reset()
     {
         completions.Clear();
