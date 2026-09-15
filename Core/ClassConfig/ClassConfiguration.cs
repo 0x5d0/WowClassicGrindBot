@@ -107,6 +107,8 @@ public sealed partial class ClassConfiguration
     [JsonConverter(typeof(IntOrIntArrayDictionaryConverter))]
     public Dictionary<string, int[]> IntVariables { get; } = [];
 
+    public int[] QuestHistoryIds { get; set; } = [];
+
     public Dictionary<string, string> StringVariables { get; } = [];
 
     public KeyActions Pull { get; } = new();

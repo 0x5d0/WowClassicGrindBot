@@ -45,6 +45,7 @@ public sealed partial class BotController : IBotController, IDisposable
     private readonly ActionBarSlotValidator slotValidator;
     private readonly ActionBarTextureReader textureReader;
     private readonly ActionBarMacroReader macroReader;
+    private readonly QuestHistorySender questHistorySender;
 
     private readonly NpcNameOverlay? npcNameOverlay;
 
@@ -91,7 +92,8 @@ public sealed partial class BotController : IBotController, IDisposable
         IOptions<StartupConfigNpcOverlay> overlayOptions,
         ActionBarSlotValidator slotValidator,
         ActionBarTextureReader textureReader,
-        ActionBarMacroReader macroReader)
+        ActionBarMacroReader macroReader,
+        QuestHistorySender questHistorySender)
     {
         this.serviceProvider = serviceProvider;
 
@@ -108,6 +110,7 @@ public sealed partial class BotController : IBotController, IDisposable
         this.slotValidator = slotValidator;
         this.textureReader = textureReader;
         this.macroReader = macroReader;
+        this.questHistorySender = questHistorySender;
 
         this.minimapNodeFinder = minimapNodeFinder;
 
@@ -430,6 +433,7 @@ public sealed partial class BotController : IBotController, IDisposable
             ClassConfig = tryLoadConfig;
 
             ClassConfig.FileName = classFile;
+            questHistorySender.Send(ClassConfig.QuestHistoryIds);
 
             // Validate action bar slots against expected spells
             // (may be deferred if textures aren't ready yet)

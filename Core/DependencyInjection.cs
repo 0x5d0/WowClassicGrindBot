@@ -313,6 +313,7 @@ public static class DependencyInjection
         s.AddSingleton<RouteGenerator>();
 
         s.AddAddonComponents();
+        s.AddSingleton<QuestHistorySender>();
 
         s.AddSingleton<ActionBarSlotValidator>();
 

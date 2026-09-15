@@ -50,6 +50,7 @@ internal sealed class Program
         {
             QuestHistoryProtocolTests.Run();
             QuestHistoryReaderTests.Run();
+            QuestHistoryRequestTests.Run();
         },
     };
 
