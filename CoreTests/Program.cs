@@ -52,6 +52,7 @@ internal sealed class Program
             QuestHistoryReaderTests.Run();
             QuestHistoryRequestTests.Run();
         },
+        ["quest-dialog"] = _ => QuestDialogProtocolTests.Run(),
     };
 
     /// <summary>Suites that need no WoW process - see the attach decision in Main.</summary>
@@ -62,6 +63,7 @@ internal sealed class Program
             "routegen",
             "quest-reader",
             "quest-history",
+            "quest-dialog",
         };
 
     public static void Main(string[] args)
