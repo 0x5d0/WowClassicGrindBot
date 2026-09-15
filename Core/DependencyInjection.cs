@@ -56,6 +56,7 @@ public static class DependencyInjection
         s.ForwardSingleton<TalentReader, IReader>();
         s.ForwardSingleton<TrainerReader, IReader>();
         s.ForwardSingleton<QuestReader, IReader>();
+        s.ForwardSingleton<QuestHistoryReader, IReader>();
         s.ForwardSingleton<KeyBindingsReader, IReader>();
         s.ForwardSingleton<ActionBarTextureReader, IReader>();
         s.ForwardSingleton<ActionBarMacroReader, IReader>();
@@ -210,6 +211,7 @@ public static class DependencyInjection
         s.ForwardSingleton<TalentReader>(sp);
         s.ForwardSingleton<TrainerReader>(sp);
         s.ForwardSingleton<QuestReader>(sp);
+        s.ForwardSingleton<QuestHistoryReader>(sp);
 
         s.ForwardSingleton<ActionBarCostReader>(sp);
         s.ForwardSingleton<ActionBarCooldownReader>(sp);

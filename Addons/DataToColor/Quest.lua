@@ -6,12 +6,16 @@ local GetQuestLogTitle = GetQuestLogTitle
 local ExpandQuestHeader = ExpandQuestHeader
 local CollapseQuestHeader = CollapseQuestHeader
 local GetTime = GetTime
+local IsQuestFlaggedCompleted = C_QuestLog.IsQuestFlaggedCompleted
 
 local QUEST_HEADER_BASE = 16777000
 local QUEST_HEADER_GENERATION_STRIDE = 64
 local QUEST_END_BASE = 16777192
 local QUEST_RECORD_STRIDE = 16
 local QUEST_STATUS_STRIDE = 4
+local QUEST_HISTORY_RECORD_STRIDE = 8
+local QUEST_HISTORY_STATUS_STRIDE = 2
+local MAX_HISTORY_QUEST_ID = 2097124
 
 local QUEST_STATUS_INCOMPLETE = 1
 local QUEST_STATUS_READY_FOR_TURN_IN = 2
@@ -25,6 +29,11 @@ local QUEST_SNAPSHOT_REFRESH_SECONDS = 15
 local questSnapshotGeneration = -1
 local questSnapshotDirty = true
 local questSnapshotNextRefreshTime = 0
+local questHistoryGeneration = -1
+local questHistoryDirty = false
+local questHistoryRefreshAt = 0
+local questHistoryIds = {}
+local questHistoryRequested = false
 
 local function ExpandCollapsedQuestHeaders()
     local collapsedHeaderTitles = {}
@@ -165,6 +174,7 @@ end
 
 function DataToColor:OnQuestLogUpdate()
     DataToColor:MarkQuestSnapshotDirty()
+    DataToColor:MarkQuestHistoryDirty()
 end
 
 function DataToColor:UpdateQuestSnapshot()
@@ -240,5 +250,140 @@ function DataToColor:QueueQuestSnapshot(now)
 
     questSnapshotDirty = false
     questSnapshotNextRefreshTime =
+        (now or GetTime()) + QUEST_SNAPSHOT_REFRESH_SECONDS
+end
+
+local function NormalizeQuestHistoryIds(ids)
+    if type(ids) ~= "table" then
+        return nil
+    end
+
+    local result = {}
+    local seen = {}
+
+    for _, id in ipairs(ids) do
+        if type(id) ~= "number" or
+            id % 1 ~= 0 or
+            id <= 0 or
+            id > MAX_HISTORY_QUEST_ID then
+
+            return nil
+        end
+
+        if not seen[id] then
+            seen[id] = true
+            table.insert(result, id)
+
+            if #result > MAX_SNAPSHOT_COUNT then
+                return nil
+            end
+        end
+    end
+
+    table.sort(result)
+
+    return result
+end
+
+function DataToColor:SetQuestHistory(ids)
+    local nextIds = NormalizeQuestHistoryIds(ids)
+
+    if not nextIds then
+        return false
+    end
+
+    questHistoryIds = nextIds
+    questHistoryRequested = true
+
+    if DataToColor.questHistoryQueue then
+        DataToColor.questHistoryQueue:clear()
+    end
+
+    DataToColor:MarkQuestHistoryDirty()
+
+    return true
+end
+
+function DataToColor:MarkQuestHistoryDirty()
+    if questHistoryRequested then
+        questHistoryDirty = true
+    end
+end
+
+local function ReadQuestHistory(ids, isCompleted)
+    local records = {}
+
+    for index, questId in ipairs(ids) do
+        local ok, completed =
+            pcall(isCompleted, questId)
+
+        if not ok then
+            return nil
+        end
+
+        records[index] = completed == true
+    end
+
+    return records
+end
+
+function DataToColor:UpdateQuestHistory()
+    if not questHistoryRequested then
+        return
+    end
+
+    local now = GetTime()
+
+    if now >= questHistoryRefreshAt then
+        questHistoryDirty = true
+    end
+
+    if not questHistoryDirty then
+        return
+    end
+
+    local queue = DataToColor.questHistoryQueue
+
+    if not queue or queue:peek() ~= nil then
+        return
+    end
+
+    DataToColor:QueueQuestHistory(now)
+end
+
+function DataToColor:QueueQuestHistory(now)
+    local records = ReadQuestHistory(questHistoryIds, IsQuestFlaggedCompleted)
+
+    if not records then
+        questHistoryDirty = false
+        questHistoryRefreshAt =
+            (now or GetTime()) + QUEST_SNAPSHOT_REFRESH_SECONDS
+
+        return
+    end
+
+    questHistoryGeneration =
+        (questHistoryGeneration + 1) % (MAX_GENERATION + 1)
+
+    local queue = DataToColor.questHistoryQueue
+
+    queue:push(
+        QUEST_HEADER_BASE +
+        questHistoryGeneration * QUEST_HEADER_GENERATION_STRIDE +
+        #questHistoryIds)
+
+    for index, questId in ipairs(questHistoryIds) do
+        local completed = records[index] and 1 or 0
+
+        queue:push(
+            questId * QUEST_HISTORY_RECORD_STRIDE +
+            questHistoryGeneration * QUEST_HISTORY_STATUS_STRIDE +
+            completed)
+    end
+
+    queue:push(QUEST_END_BASE + questHistoryGeneration)
+
+    questHistoryDirty = false
+    questHistoryRefreshAt =
         (now or GetTime()) + QUEST_SNAPSHOT_REFRESH_SECONDS
 end

@@ -264,6 +264,8 @@ DataToColor.spellBookQueue = DataToColor.TimedQueue:new(SPELLBOOK_ITERATION_FRAM
 DataToColor.talentQueue = DataToColor.TimedQueue:new(TALENT_ITERATION_FRAME_CHANGE_RATE, nil)
 DataToColor.trainerQueue = DataToColor.TimedQueue:new(GOSSIP_ITERATION_FRAME_CHANGE_RATE, nil)
 DataToColor.questQueue = DataToColor.TimedQueue:new(FRAME_CHANGE_RATE, 0)
+DataToColor.questHistoryQueue =
+    DataToColor.TimedQueue:new(FRAME_CHANGE_RATE, 0)
 
 DataToColor.actionBarCostQueue = DataToColor.struct:new(ACTION_BAR_ITERATION_FRAME_CHANGE_RATE)
 DataToColor.actionBarCooldownQueue = DataToColor.struct:new(ACTION_BAR_ITERATION_FRAME_CHANGE_RATE)
@@ -579,6 +581,9 @@ function DataToColor:Update()
     if DataToColor.UpdateQuestSnapshot then
         DataToColor:UpdateQuestSnapshot()
     end
+    if DataToColor.UpdateQuestHistory then
+        DataToColor:UpdateQuestHistory()
+    end
 end
 
 function DataToColor:ClearAllQueues()
@@ -592,6 +597,9 @@ function DataToColor:ClearAllQueues()
     DataToColor.trainerQueue:clear()
     if DataToColor.questQueue then
         DataToColor.questQueue:clear()
+    end
+    if DataToColor.questHistoryQueue then
+        DataToColor.questHistoryQueue:clear()
     end
     DataToColor.CombatDamageDoneQueue:clear()
     DataToColor.CombatDamageTakenQueue:clear()
@@ -643,6 +651,9 @@ function DataToColor:InitUpdateQueues()
     DataToColor:InitActionBarMacroQueue()
     if DataToColor.MarkQuestSnapshotDirty then
         DataToColor:MarkQuestSnapshotDirty()
+    end
+    if DataToColor.MarkQuestHistoryDirty then
+        DataToColor:MarkQuestHistoryDirty()
     end
 end
 
@@ -1585,8 +1596,15 @@ function DataToColor:CreateFrames()
             end
 
             Pixel(int, questValue, QUEST_STATE_CELL)
-            -- Reserved for quest history
-            Pixel(int, 0, QUEST_HISTORY_CELL)
+
+            local questHistoryValue = 0
+
+            if DataToColor.questHistoryQueue then
+                questHistoryValue =
+                    DataToColor.questHistoryQueue:shift(globalTick) or 0
+            end
+
+            Pixel(int, questHistoryValue, QUEST_HISTORY_CELL)
 
             UpdateGlobalTime()
             -- NUMBER_OF_FRAMES - 1 reserved for validation
