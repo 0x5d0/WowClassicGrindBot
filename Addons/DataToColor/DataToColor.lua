@@ -6,8 +6,8 @@
 local SETUP_SEQUENCE = false
 -- Total number of data frames generated
 local NUMBER_OF_FRAMES = 120
-
-local QUEST_STATE_CELL = NUMBER_OF_FRAMES - 3
+-- Cell 117 is the fixed active-quest snapshot channel.
+local QUEST_STATE_CELL = 117
 -- Set number of pixel rows
 local FRAME_ROWS = 1
 -- Size of data squares in px. Varies based on rounding errors as well as dimension size. Use as a guideline, but not 100% accurate.
@@ -262,6 +262,7 @@ DataToColor.gossipQueue = DataToColor.TimedQueue:new(GOSSIP_ITERATION_FRAME_CHAN
 DataToColor.spellBookQueue = DataToColor.TimedQueue:new(SPELLBOOK_ITERATION_FRAME_CHANGE_RATE, nil)
 DataToColor.talentQueue = DataToColor.TimedQueue:new(TALENT_ITERATION_FRAME_CHANGE_RATE, nil)
 DataToColor.trainerQueue = DataToColor.TimedQueue:new(GOSSIP_ITERATION_FRAME_CHANGE_RATE, nil)
+DataToColor.questQueue = DataToColor.TimedQueue:new(FRAME_CHANGE_RATE, 0)
 
 DataToColor.actionBarCostQueue = DataToColor.struct:new(ACTION_BAR_ITERATION_FRAME_CHANGE_RATE)
 DataToColor.actionBarCooldownQueue = DataToColor.struct:new(ACTION_BAR_ITERATION_FRAME_CHANGE_RATE)
@@ -573,6 +574,10 @@ function DataToColor:Update()
         -- overflow wont trigger init state at backend
         DataToColor.globalTime = initPhase
     end
+
+    if DataToColor.UpdateQuestSnapshot then
+        DataToColor:UpdateQuestSnapshot()
+    end
 end
 
 function DataToColor:ClearAllQueues()
@@ -584,6 +589,9 @@ function DataToColor:ClearAllQueues()
     DataToColor.spellBookQueue:clear()
     DataToColor.talentQueue:clear()
     DataToColor.trainerQueue:clear()
+    if DataToColor.questQueue then
+        DataToColor.questQueue:clear()
+    end
     DataToColor.CombatDamageDoneQueue:clear()
     DataToColor.CombatDamageTakenQueue:clear()
     DataToColor.CombatCreatureDiedQueue:clear()
@@ -632,6 +640,9 @@ function DataToColor:InitUpdateQueues()
     DataToColor:InitBindingQueue()
     DataToColor:InitActionBarTextureQueue()
     DataToColor:InitActionBarMacroQueue()
+    if DataToColor.MarkQuestSnapshotDirty then
+        DataToColor:MarkQuestSnapshotDirty()
+    end
 end
 
 function DataToColor:InitEquipmentQueue()
@@ -1566,7 +1577,13 @@ function DataToColor:CreateFrames()
             local _, playerRunSpeed = GetUnitSpeed(DataToColor.C.unitPlayer)
             Pixel(fixed20, playerRunSpeed or 0, 111)
 
-            Pixel(int, DataToColor:GetQuestState(6062), QUEST_STATE_CELL)
+            local questValue = 0
+
+            if DataToColor.questQueue then
+                questValue = DataToColor.questQueue:shift(globalTick) or 0
+            end
+
+            Pixel(int, questValue, QUEST_STATE_CELL)
 
             UpdateGlobalTime()
             -- NUMBER_OF_FRAMES - 1 reserved for validation

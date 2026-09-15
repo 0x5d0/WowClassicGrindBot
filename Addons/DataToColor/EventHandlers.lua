@@ -113,6 +113,11 @@ local errorListMessages = {}
 
 function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent("PLAYER_ENTERING_WORLD", "OnEnteringWorld")
+    if DataToColor.OnQuestLogUpdate then
+        DataToColor:SafeRegisterEvent(
+            "QUEST_LOG_UPDATE",
+            "OnQuestLogUpdate")
+    end
 
     DataToColor:RegisterEvent("UI_ERROR_MESSAGE", 'OnUIErrorMessage')
     DataToColor:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", 'UnfilteredCombatEvent')
