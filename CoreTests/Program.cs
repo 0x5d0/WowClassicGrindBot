@@ -52,7 +52,11 @@ internal sealed class Program
             QuestHistoryReaderTests.Run();
             QuestHistoryRequestTests.Run();
         },
-        ["quest-dialog"] = _ => QuestDialogProtocolTests.Run(),
+        ["quest-dialog"] = _ =>
+        {
+            QuestDialogProtocolTests.Run();
+            QuestDialogReaderTests.Run();
+        },
     };
 
     /// <summary>Suites that need no WoW process - see the attach decision in Main.</summary>
