@@ -1,6 +1,12 @@
 local Load = select(2, ...)
 local DataToColor = Load[1]
 
+local GetNumQuestLogEntries = GetNumQuestLogEntries
+local GetQuestLogTitle = GetQuestLogTitle
+local ExpandQuestHeader = ExpandQuestHeader
+local CollapseQuestHeader = CollapseQuestHeader
+local GetTime = GetTime
+
 local QUEST_HEADER_BASE = 16777000
 local QUEST_HEADER_GENERATION_STRIDE = 64
 local QUEST_END_BASE = 16777192
@@ -20,14 +26,112 @@ local questSnapshotGeneration = -1
 local questSnapshotDirty = true
 local questSnapshotNextRefreshTime = 0
 
-function DataToColor:IsQuestActive(questId)
+local function ExpandCollapsedQuestHeaders()
+    local collapsedHeaderTitles = {}
+    local index = 1
     local entryCount = GetNumQuestLogEntries()
 
-    for index = 1, entryCount do
-        local _, _, _, isHeader, _, _, _, currentQuestId =
+    while index <= entryCount do
+        local title, _, _, isHeader, isCollapsed =
             GetQuestLogTitle(index)
 
-        if not isHeader and currentQuestId == questId then
+        if isHeader and isCollapsed then
+            table.insert(collapsedHeaderTitles, title)
+            ExpandQuestHeader(index)
+
+            -- Expanding a header can reveal more entries and headers.
+            entryCount = GetNumQuestLogEntries()
+        end
+
+        index = index + 1
+    end
+
+    return collapsedHeaderTitles
+end
+
+local function RestoreCollapsedQuestHeaders(collapsedHeaderTitles)
+    -- Restore from the innermost/last expanded header first.
+    for i = #collapsedHeaderTitles, 1, -1 do
+        local wantedTitle = collapsedHeaderTitles[i]
+        local entryCount = GetNumQuestLogEntries()
+
+        for index = 1, entryCount do
+            local title, _, _, isHeader, isCollapsed =
+                GetQuestLogTitle(index)
+
+            if isHeader and
+                not isCollapsed and
+                title == wantedTitle then
+
+                CollapseQuestHeader(index)
+                break
+            end
+        end
+    end
+end
+
+local function CollectActiveQuestRecords()
+    local collapsedHeaderTitles = {}
+
+    local success, recordsOrError = pcall(function()
+        collapsedHeaderTitles = ExpandCollapsedQuestHeaders()
+
+        local records = {}
+        local seenQuestIds = {}
+        local entryCount = GetNumQuestLogEntries()
+
+        for index = 1, entryCount do
+            local _, _, _, isHeader, _, isComplete, _, questId =
+                GetQuestLogTitle(index)
+
+            if not isHeader and
+                type(questId) == "number" and
+                questId > 0 and
+                questId <= MAX_QUEST_ID and
+                not seenQuestIds[questId] then
+
+                local status = QUEST_STATUS_INCOMPLETE
+
+                if isComplete == 1 then
+                    status = QUEST_STATUS_READY_FOR_TURN_IN
+                elseif isComplete == -1 then
+                    status = QUEST_STATUS_FAILED
+                end
+
+                seenQuestIds[questId] = true
+
+                table.insert(records,
+                    {
+                        questId = questId,
+                        status = status
+                    })
+            end
+        end
+
+        return records
+    end)
+
+    RestoreCollapsedQuestHeaders(collapsedHeaderTitles)
+
+    if not success then
+        DataToColor:Print(
+            "Quest snapshot failed: " .. tostring(recordsOrError))
+
+        return nil
+    end
+
+    return recordsOrError
+end
+
+function DataToColor:IsQuestActive(questId)
+    local records = CollectActiveQuestRecords()
+
+    if not records then
+        return false
+    end
+
+    for _, record in ipairs(records) do
+        if record.questId == questId then
             return true
         end
     end
@@ -36,14 +140,15 @@ function DataToColor:IsQuestActive(questId)
 end
 
 function DataToColor:IsQuestReadyForTurnIn(questId)
-    local entryCount = GetNumQuestLogEntries()
+    local records = CollectActiveQuestRecords()
 
-    for index = 1, entryCount do
-        local _, _, _, isHeader, _, isComplete, _, currentQuestId =
-            GetQuestLogTitle(index)
+    if not records then
+        return false
+    end
 
-        if not isHeader and currentQuestId == questId then
-            return isComplete == 1
+    for _, record in ipairs(records) do
+        if record.questId == questId then
+            return record.status == QUEST_STATUS_READY_FOR_TURN_IN
         end
     end
 
@@ -79,6 +184,7 @@ function DataToColor:UpdateQuestSnapshot()
         return
     end
 
+    -- Finish the active snapshot before queuing its replacement.
     if queue:peek() ~= nil then
         return
     end
@@ -87,36 +193,14 @@ function DataToColor:UpdateQuestSnapshot()
 end
 
 function DataToColor:QueueQuestSnapshot(now)
-    local records = {}
-    local seenQuestIds = {}
-    local entryCount = GetNumQuestLogEntries()
+    local records = CollectActiveQuestRecords()
 
-    for index = 1, entryCount do
-        local _, _, _, isHeader, _, isComplete, _, questId =
-            GetQuestLogTitle(index)
+    if not records then
+        questSnapshotDirty = false
+        questSnapshotNextRefreshTime =
+            (now or GetTime()) + QUEST_SNAPSHOT_REFRESH_SECONDS
 
-        if not isHeader and
-            type(questId) == "number" and
-            questId > 0 and
-            questId <= MAX_QUEST_ID and
-            not seenQuestIds[questId] then
-
-            local status = QUEST_STATUS_INCOMPLETE
-
-            if isComplete == 1 then
-                status = QUEST_STATUS_READY_FOR_TURN_IN
-            elseif isComplete == -1 then
-                status = QUEST_STATUS_FAILED
-            end
-
-            seenQuestIds[questId] = true
-
-            table.insert(records,
-                {
-                    questId = questId,
-                    status = status
-                })
-        end
+        return
     end
 
     if #records > MAX_SNAPSHOT_COUNT then
@@ -125,9 +209,9 @@ function DataToColor:QueueQuestSnapshot(now)
             #records .. ")")
 
         questSnapshotDirty = false
-
         questSnapshotNextRefreshTime =
             (now or GetTime()) + QUEST_SNAPSHOT_REFRESH_SECONDS
+
         return
     end
 
@@ -155,7 +239,6 @@ function DataToColor:QueueQuestSnapshot(now)
     queue:push(QUEST_END_BASE + questSnapshotGeneration)
 
     questSnapshotDirty = false
-
     questSnapshotNextRefreshTime =
         (now or GetTime()) + QUEST_SNAPSHOT_REFRESH_SECONDS
 end
