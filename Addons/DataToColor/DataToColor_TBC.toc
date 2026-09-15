@@ -5,7 +5,7 @@
 ## Version: 1.13.2
 ## RequiredDeps:
 ## OptionalDeps: Ace3, LibRangeCheck, LibClassicCasterino
-## SavedVariables:
+## SavedVariables: DataToColorQuestHistory
 
 embeds-ace3-v12.xml
 

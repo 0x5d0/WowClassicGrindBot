@@ -652,8 +652,9 @@ function DataToColor:InitUpdateQueues()
     if DataToColor.MarkQuestSnapshotDirty then
         DataToColor:MarkQuestSnapshotDirty()
     end
-    if DataToColor.MarkQuestHistoryDirty then
-        DataToColor:MarkQuestHistoryDirty()
+
+    if DataToColor.RestoreQuestHistory then
+        DataToColor:RestoreQuestHistory()
     end
 end
 

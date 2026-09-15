@@ -32,8 +32,6 @@ local questSnapshotNextRefreshTime = 0
 local questHistoryGeneration = -1
 local questHistoryDirty = false
 local questHistoryRefreshAt = 0
-local questHistoryIds = {}
-local questHistoryRequested = false
 
 local function ExpandCollapsedQuestHeaders()
     local collapsedHeaderTitles = {}
@@ -285,6 +283,12 @@ local function NormalizeQuestHistoryIds(ids)
     return result
 end
 
+local savedQuestHistoryIds =
+    NormalizeQuestHistoryIds(DataToColorQuestHistory)
+
+local questHistoryIds = savedQuestHistoryIds or {}
+local questHistoryRequested = savedQuestHistoryIds ~= nil
+
 function DataToColor:SetQuestHistory(ids)
     local nextIds = NormalizeQuestHistoryIds(ids)
 
@@ -293,6 +297,7 @@ function DataToColor:SetQuestHistory(ids)
     end
 
     questHistoryIds = nextIds
+    DataToColorQuestHistory = nextIds
     questHistoryRequested = true
 
     if DataToColor.questHistoryQueue then
@@ -302,6 +307,14 @@ function DataToColor:SetQuestHistory(ids)
     DataToColor:MarkQuestHistoryDirty()
 
     return true
+end
+
+function DataToColor:RestoreQuestHistory()
+    local ids = NormalizeQuestHistoryIds(DataToColorQuestHistory)
+
+    if ids then
+        DataToColor:SetQuestHistory(ids)
+    end
 end
 
 function DataToColor:MarkQuestHistoryDirty()
