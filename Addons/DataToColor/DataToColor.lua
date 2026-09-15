@@ -5,9 +5,10 @@
 -- Trigger between emitting game data and frame location data
 local SETUP_SEQUENCE = false
 -- Total number of data frames generated
-local NUMBER_OF_FRAMES = 120
--- Cell 117 is the fixed active-quest snapshot channel.
+local NUMBER_OF_FRAMES = 121
+-- Quest telemetry channels.
 local QUEST_STATE_CELL = 117
+local QUEST_HISTORY_CELL = 118
 -- Set number of pixel rows
 local FRAME_ROWS = 1
 -- Size of data squares in px. Varies based on rounding errors as well as dimension size. Use as a guideline, but not 100% accurate.
@@ -1584,6 +1585,8 @@ function DataToColor:CreateFrames()
             end
 
             Pixel(int, questValue, QUEST_STATE_CELL)
+            -- Reserved for quest history
+            Pixel(int, 0, QUEST_HISTORY_CELL)
 
             UpdateGlobalTime()
             -- NUMBER_OF_FRAMES - 1 reserved for validation

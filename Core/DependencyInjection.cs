@@ -92,7 +92,7 @@ public static class DependencyInjection
 
         s.AddSingleton<DataConfig>(x => DataConfig.Load(clientPath));
 
-        const int frameCount = 120;
+        const int frameCount = 121;
         DataFrame[] frames = new DataFrame[frameCount];
         for (int i = 0; i < frameCount; i++)
             frames[i] = new(i, 0, 0);
