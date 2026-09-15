@@ -46,7 +46,11 @@ internal sealed class Program
         ["navmesh"] = Test_NavmeshCoords,
         ["routegen"] = Test_RouteGeneration,
         ["quest-reader"] = _ => QuestReaderProtocolTests.Run(),
-        ["quest-history"] = _ => QuestHistoryTests.Run(),
+        ["quest-history"] = _ =>
+        {
+            QuestHistoryProtocolTests.Run();
+            QuestHistoryReaderTests.Run();
+        },
     };
 
     /// <summary>Suites that need no WoW process - see the attach decision in Main.</summary>
