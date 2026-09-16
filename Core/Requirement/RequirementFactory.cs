@@ -26,6 +26,7 @@ public sealed partial class RequirementFactory
     private readonly AddonReader addonReader;
     private readonly QuestReader questReader;
     private readonly QuestHistoryReader questHistoryReader;
+    private readonly QuestDialogReader questDialogReader;
     private readonly PlayerReader playerReader;
     private readonly BuffStatus<IPlayer> buffs;
     private readonly BagReader bagReader;
@@ -81,6 +82,7 @@ public sealed partial class RequirementFactory
         this.addonReader = sp.GetRequiredService<AddonReader>();
         this.questReader = sp.GetRequiredService<QuestReader>();
         this.questHistoryReader = sp.GetRequiredService<QuestHistoryReader>();
+        this.questDialogReader = sp.GetRequiredService<QuestDialogReader>();
         this.playerReader = sp.GetRequiredService<PlayerReader>();
         this.buffs = sp.GetRequiredService<BuffStatus<IPlayer>>();
         this.bagReader = sp.GetRequiredService<BagReader>();
@@ -131,6 +133,9 @@ public sealed partial class RequirementFactory
             { "QuestFailed:", CreateQuestFailed },
             { "QuestCompleted:", CreateQuestCompleted },
             { "QuestNotCompleted:", CreateQuestNotCompleted },
+            { "QuestOffered:", CreateQuestOffered },
+            { "QuestDialogActive:", CreateQuestDialogActive },
+            { "QuestDialogReady:", CreateQuestDialogReady },
             { "SpellInRange:", CreateSpellInRange },
             { "TargetCastingSpell", CreateTargetCastingSpell },
             { "Form", CreateForm },
@@ -1090,6 +1095,36 @@ public sealed partial class RequirementFactory
         return CreateHistoryRequirement(
             text,
             questHistoryReader.IsNotCompleted);
+    }
+
+    private Requirement CreateQuestOffered(ReadOnlySpan<char> text)
+    {
+        int questId = ParseQuestId(text);
+
+        return CreateQuestRequirement(
+            text,
+            questId,
+            questDialogReader.IsOffered);
+    }
+
+    private Requirement CreateQuestDialogActive(ReadOnlySpan<char> text)
+    {
+        int questId = ParseQuestId(text);
+
+        return CreateQuestRequirement(
+            text,
+            questId,
+            questDialogReader.IsActive);
+    }
+
+    private Requirement CreateQuestDialogReady(ReadOnlySpan<char> text)
+    {
+        int questId = ParseQuestId(text);
+
+        return CreateQuestRequirement(
+            text,
+            questId,
+            questDialogReader.IsReadyForTurnIn);
     }
 
     private Requirement CreateHistoryRequirement(
