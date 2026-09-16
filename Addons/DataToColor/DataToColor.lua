@@ -5,10 +5,11 @@
 -- Trigger between emitting game data and frame location data
 local SETUP_SEQUENCE = false
 -- Total number of data frames generated
-local NUMBER_OF_FRAMES = 121
+local NUMBER_OF_FRAMES = 122
 -- Quest telemetry channels.
 local QUEST_STATE_CELL = 117
 local QUEST_HISTORY_CELL = 118
+local QUEST_DIALOG_CELL = 119
 -- Set number of pixel rows
 local FRAME_ROWS = 1
 -- Size of data squares in px. Varies based on rounding errors as well as dimension size. Use as a guideline, but not 100% accurate.
@@ -264,8 +265,8 @@ DataToColor.spellBookQueue = DataToColor.TimedQueue:new(SPELLBOOK_ITERATION_FRAM
 DataToColor.talentQueue = DataToColor.TimedQueue:new(TALENT_ITERATION_FRAME_CHANGE_RATE, nil)
 DataToColor.trainerQueue = DataToColor.TimedQueue:new(GOSSIP_ITERATION_FRAME_CHANGE_RATE, nil)
 DataToColor.questQueue = DataToColor.TimedQueue:new(FRAME_CHANGE_RATE, 0)
-DataToColor.questHistoryQueue =
-    DataToColor.TimedQueue:new(FRAME_CHANGE_RATE, 0)
+DataToColor.questHistoryQueue = DataToColor.TimedQueue:new(FRAME_CHANGE_RATE, 0)
+DataToColor.questDialogQueue = DataToColor.TimedQueue:new(FRAME_CHANGE_RATE, 0)
 
 DataToColor.actionBarCostQueue = DataToColor.struct:new(ACTION_BAR_ITERATION_FRAME_CHANGE_RATE)
 DataToColor.actionBarCooldownQueue = DataToColor.struct:new(ACTION_BAR_ITERATION_FRAME_CHANGE_RATE)
@@ -600,6 +601,9 @@ function DataToColor:ClearAllQueues()
     end
     if DataToColor.questHistoryQueue then
         DataToColor.questHistoryQueue:clear()
+    end
+    if DataToColor.questDialogQueue then
+        DataToColor.questDialogQueue:clear()
     end
     DataToColor.CombatDamageDoneQueue:clear()
     DataToColor.CombatDamageTakenQueue:clear()
@@ -1606,6 +1610,15 @@ function DataToColor:CreateFrames()
             end
 
             Pixel(int, questHistoryValue, QUEST_HISTORY_CELL)
+
+            local questDialogValue = 0
+
+            if DataToColor.questDialogQueue then
+                questDialogValue =
+                    DataToColor.questDialogQueue:shift(globalTick) or 0
+            end
+
+            Pixel(int, questDialogValue, QUEST_DIALOG_CELL)
 
             UpdateGlobalTime()
             -- NUMBER_OF_FRAMES - 1 reserved for validation

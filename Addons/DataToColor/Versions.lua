@@ -592,6 +592,9 @@ DataToColor.OnGossipShow = function(event)
   end
 
   DataToColor.gossipQueue:push(DataToColor.GOSSIP_END)
+  if DataToColor.QueueQuestGossip then
+    DataToColor:QueueQuestGossip()
+  end
 end
 
 --------------------------------------------------------------------------------

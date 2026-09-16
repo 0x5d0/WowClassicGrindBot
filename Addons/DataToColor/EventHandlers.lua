@@ -136,6 +136,23 @@ function DataToColor:RegisterEvents()
     DataToColor:RegisterEvent('PLAYER_TARGET_CHANGED', 'OnPlayerTargetChanged')
     DataToColor:RegisterEvent('PLAYER_EQUIPMENT_CHANGED', 'OnPlayerEquipmentChanged')
     DataToColor:RegisterEvent('GOSSIP_SHOW', 'OnGossipShow') -- defined in Versions.lua
+    if DataToColor.OnQuestDetail then
+    DataToColor:SafeRegisterEvent(
+        "QUEST_DETAIL",
+        "OnQuestDetail")
+    DataToColor:SafeRegisterEvent(
+        "QUEST_PROGRESS",
+        "OnQuestProgress")
+    DataToColor:SafeRegisterEvent(
+        "QUEST_COMPLETE",
+        "OnQuestComplete")
+    DataToColor:SafeRegisterEvent(
+        "QUEST_FINISHED",
+        "OnQuestFinished")
+    DataToColor:SafeRegisterEvent(
+        "GOSSIP_CLOSED",
+        "OnGossipClosed")
+    end
     DataToColor:RegisterEvent('SPELLS_CHANGED', 'OnSpellsChanged')
     DataToColor:SafeRegisterEvent('SKILL_LINES_CHANGED', 'OnWeaponProficienciesChanged')
     DataToColor:RegisterEvent('ACTIONBAR_SLOT_CHANGED', 'ActionbarSlotChanged')

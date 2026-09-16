@@ -57,6 +57,7 @@ public static class DependencyInjection
         s.ForwardSingleton<TrainerReader, IReader>();
         s.ForwardSingleton<QuestReader, IReader>();
         s.ForwardSingleton<QuestHistoryReader, IReader>();
+        s.ForwardSingleton<QuestDialogReader, IReader>();
         s.ForwardSingleton<KeyBindingsReader, IReader>();
         s.ForwardSingleton<ActionBarTextureReader, IReader>();
         s.ForwardSingleton<ActionBarMacroReader, IReader>();
@@ -93,7 +94,7 @@ public static class DependencyInjection
 
         s.AddSingleton<DataConfig>(x => DataConfig.Load(clientPath));
 
-        const int frameCount = 121;
+        const int frameCount = 122;
         DataFrame[] frames = new DataFrame[frameCount];
         for (int i = 0; i < frameCount; i++)
             frames[i] = new(i, 0, 0);
@@ -212,6 +213,7 @@ public static class DependencyInjection
         s.ForwardSingleton<TrainerReader>(sp);
         s.ForwardSingleton<QuestReader>(sp);
         s.ForwardSingleton<QuestHistoryReader>(sp);
+        s.ForwardSingleton<QuestDialogReader>(sp);
 
         s.ForwardSingleton<ActionBarCostReader>(sp);
         s.ForwardSingleton<ActionBarCooldownReader>(sp);
