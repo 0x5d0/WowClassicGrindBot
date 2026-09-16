@@ -56,6 +56,7 @@ internal sealed class Program
         {
             QuestDialogProtocolTests.Run();
             QuestDialogReaderTests.Run();
+            QuestDialogCommandTests.Run();
         },
     };
 
